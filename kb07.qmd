@@ -28,7 +28,7 @@ ProgressMeter.ijulia_behavior(:clear)
 The `kb07` data [@Kronmueller2007] are one of the datasets provided by the `MixedModels` package.
 
 ```{julia}
-kb07 = dataset(:kb07)
+kb07 = dataset(:kb07) 
 ```
 
 Convert the table to a DataFrame for summary.
@@ -64,7 +64,7 @@ kbm01 = let
       (1 + spkr + prec + load | subj) +
       (1 + spkr + prec + load | item)
   )
-  fit(MixedModel, form, kb07; contrasts)
+  fit(MixedModel, form, kb07; contrasts) #named argument after ;
 end
 ```
 
