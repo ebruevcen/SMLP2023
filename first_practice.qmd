@@ -1,0 +1,145 @@
+---
+title: "Practice 1"
+subtitle: "Conditional Inferences in SMLP2023"
+author: "Ebru Evcen"
+date: "2023-09-12"
+format:
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 2
+    code-fold: false
+    number-sections: true
+    fig-width: 8
+    fig-height: 6
+editor_options:
+  chunk_output_type: console
+jupyter: julia-1.9
+---
+
+
+```{julia}
+using Pkg
+Pkg.add("CSV")
+using CSV, DataFrames
+
+```
+```{julia}
+df = CSV.read("evcen_smlp23.csv", DataFrame)
+```
+
+
+```{julia}
+describe(df)
+```
+
+
+```{julia}
+levels(df.type)
+levels(df.response)
+levels(df.condition)
+```
+
+
+```{julia}
+dat = DataFrame(Arrow.Table("data/Evcen_CondInf.arrow"));
+describe(dat)
+levels(dat.Type)
+levels(dat.Resp)
+levels(dat.Cat)
+```
+
+```{julia}
+##Cannot run this!!
+dat.sum = DataFrame(dataset(:dat))
+cellmeans = combine(
+  groupby(dat.sum, [:Type]),
+  :rt => mean,
+  :rt => std,
+  :rt => length,
+  :rt => (x -> std(x) / sqrt(length(x))) => :rt_semean,
+)
+```
+
+```{julia}
+
+dat01 = let
+contrasts =Dict(:Type => EffectsCoding(; base= "standard"),
+                :Resp => EffectsCoding(; base ="F"),
+                :Cat => EffectsCoding(; base="control"))
+  form = @formula(
+    rt ~
+      1 +
+      Type * Resp * Cat +
+      (1 + Type + Resp + Cat | Subj) +
+      (1 + Resp + Cat | Item)
+  )
+  fit(MixedModel, form, dat; contrasts) 
+end
+
+```
+
+
+```{julia}
+pb = parametricbootstrap(MersenneTwister(42),1000, dat01; optsum_overrides =(;ftol_rel=1e-8))
+
+```
+
+
+```{julia}
+Table(pb.coefpvalues) 
+```
+
+
+```{julia}
+draw(
+  data(pb.β) * mapping(:β; color=:coefname) * AlgebraOfGraphics.density();
+  figure=(; resolution=(800, 450)),
+)
+```
+
+
+```{julia}
+ridgeplot(pb, show_intercept = false)
+```
+
+
+
+```{julia}
+
+m_prm1 = let
+contrasts =Dict(:Type => EffectsCoding(; base= "standard"),
+                :Resp => EffectsCoding(; base ="F"),
+                :Cat => EffectsCoding(; base="control"))
+form2 = @formula(
+    rt ~
+      1 +
+      (Type + Resp + Cat)^2 +
+      (1 + Resp | Subj) +
+      (1 + Resp + Cat | Item)
+  )
+  fit(MixedModel, form2, dat; contrasts) #named argument after ;
+  end
+```
+
+
+```{julia}
+pb2 = parametricbootstrap(MersenneTwister(42),1000, m_prm1; optsum_overrides =(;ftol_rel=1e-8))
+
+```
+
+```{julia}
+Table(pb2.coefpvalues)
+```
+
+```{julia}
+draw(
+  data(pb2.β) * mapping(:β; color=:coefname) * AlgebraOfGraphics.density();
+  figure=(; resolution=(800, 450)),
+)
+```
+
+
+```{julia}
+ridgeplot(pb2, show_intercept = false)
+```
