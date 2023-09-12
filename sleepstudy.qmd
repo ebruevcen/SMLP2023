@@ -106,7 +106,7 @@ By default, the levels of the grouping factor are sorted by increasing value of 
 #| code-fold: true
 #| fig-cap: Prediction intervals on random effects for model m1
 #| label: fig-m1caterpillar
-caterpillar(m1)
+caterpillar(m1; vline_at_zero=true)
 ```
 
 @fig-m1caterpillar reinforces the conclusion that there is little correlation between the random effect for intercept and the random effect for slope.
@@ -216,7 +216,7 @@ Simulating and fitting a substantial number of model fits, 5000 in this case, ta
 
 ```{julia}
 rng = Random.seed!(42)    # initialize a random number generator
-m1bstp = parametricbootstrap(rng, 5000, m1; hide_progress=true)
+m1bstp = parametricbootstrap(rng, 5000, m1)
 tbl = m1bstp.tbl
 ```
 
