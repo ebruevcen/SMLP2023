@@ -44,6 +44,7 @@ levels(df.condition)
 ```{julia}
 dat = DataFrame(Arrow.Table("data/Evcen_CondInf.arrow"));
 describe(dat)
+dat
 levels(dat.Type)
 levels(dat.Resp)
 levels(dat.Cat)
@@ -104,27 +105,21 @@ ridgeplot(pb, show_intercept = false)
 ```
 
 
-
 ```{julia}
 
 m_prm1 = let
 contrasts =Dict(:Type => EffectsCoding(; base= "standard"),
                 :Resp => EffectsCoding(; base ="F"),
                 :Cat => EffectsCoding(; base="control"))
-form2 = @formula(
-    rt ~
-      1 +
-      (Type + Resp + Cat)^2 +
-      (1 + Resp | Subj) +
-      (1 + Resp + Cat | Item)
-  )
-  fit(MixedModel, form2, dat; contrasts) #named argument after ;
+form = @formula(log(rt) ~ 1 + (Type + Resp + Cat)^2 + 
+                    zerocorr(1 + Resp | Subj) + zerocorr(1 + Cat + Resp | Item));
+    fit(MixedModel, form, dat; contrasts);
   end
 ```
 
 
 ```{julia}
-pb2 = parametricbootstrap(MersenneTwister(42),1000, m_prm1; optsum_overrides =(;ftol_rel=1e-8))
+pb2 = parametricbootstrap(MersenneTwister(42),10000, m_prm1; optsum_overrides =(;ftol_rel=1e-8))
 
 ```
 
@@ -132,6 +127,9 @@ pb2 = parametricbootstrap(MersenneTwister(42),1000, m_prm1; optsum_overrides =(;
 Table(pb2.coefpvalues)
 ```
 
+```{julia}
+confint(pb2)
+```
 ```{julia}
 draw(
   data(pb2.β) * mapping(:β; color=:coefname) * AlgebraOfGraphics.density();
@@ -142,4 +140,44 @@ draw(
 
 ```{julia}
 ridgeplot(pb2, show_intercept = false)
+```
+
+
+```{r}
+install.packages("tidyverse")
+library(tidyverse)
+
+dat.r = read_csv("data/evcen_smlp23.csv")
+glimpse(dat.r)
+
+dat.r.new = dat.r |>
+ group_by(type) |>
+ summarise(mean=mean(RT))
+
+dat.r
+
+dat.r.new
+
+#output it as a wrangled.csv, then reload it into arrow files?
+
+```
+
+
+```{julia}
+using Arrow
+using CSV
+using DataFrames
+
+csv_path = "evcen_smlp2023.csv"
+
+# read in the data and convert it to a dataframe
+df = CSV.read(csv_path, DataFrame)
+df
+# do stuff ....
+
+# write out the dataframe as an Arrow table
+
+arrow_path = "evcen_smlp2023.arrow"
+Arrow.write(arrow_path, df)
+
 ```
