@@ -239,6 +239,14 @@ issingular(m_prm)
 MixedModels.PCA(m_prm)
 ```
 
+## Post-hoc LMM
+```{julia}
+m_prm_posthoc =let 
+   form = @formula (1000/rt) ~ 1 + F*P+lT/(lQ*Q) +
+        (1+Q+lT | subj) + zerocorr(1 | item) ;
+    fit(MixedModel, form, dat; contrasts)
+end
+```
 ## Fixed effects
 
 Finally, a look at the fixed effects. The four-factor interaction reported in Masson & Kliegl (2013) was not replicated.

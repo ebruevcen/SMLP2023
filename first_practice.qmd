@@ -50,59 +50,6 @@ levels(dat.Resp)
 levels(dat.Cat)
 ```
 
-```{julia}
-##Cannot run this!!
-dat.sum = DataFrame(dataset(:dat))
-cellmeans = combine(
-  groupby(dat.sum, [:Type]),
-  :rt => mean,
-  :rt => std,
-  :rt => length,
-  :rt => (x -> std(x) / sqrt(length(x))) => :rt_semean,
-)
-```
-
-```{julia}
-
-dat01 = let
-contrasts =Dict(:Type => EffectsCoding(; base= "standard"),
-                :Resp => EffectsCoding(; base ="F"),
-                :Cat => EffectsCoding(; base="control"))
-  form = @formula(
-    rt ~
-      1 +
-      Type * Resp * Cat +
-      (1 + Type + Resp + Cat | Subj) +
-      (1 + Resp + Cat | Item)
-  )
-  fit(MixedModel, form, dat; contrasts) 
-end
-
-```
-
-
-```{julia}
-pb = parametricbootstrap(MersenneTwister(42),1000, dat01; optsum_overrides =(;ftol_rel=1e-8))
-
-```
-
-
-```{julia}
-Table(pb.coefpvalues) 
-```
-
-
-```{julia}
-draw(
-  data(pb.β) * mapping(:β; color=:coefname) * AlgebraOfGraphics.density();
-  figure=(; resolution=(800, 450)),
-)
-```
-
-
-```{julia}
-ridgeplot(pb, show_intercept = false)
-```
 
 
 ```{julia}
@@ -119,16 +66,12 @@ form = @formula(log(rt) ~ 1 + (Type + Resp + Cat)^2 +
 
 
 ```{julia}
-pb2 = parametricbootstrap(MersenneTwister(42),10000, m_prm1; optsum_overrides =(;ftol_rel=1e-8))
+pb2 = parametricbootstrap(MersenneTwister(42),1000, m_prm1; optsum_overrides =(;ftol_rel=1e-8))
 
 ```
 
 ```{julia}
-Table(pb2.coefpvalues)
-```
-
-```{julia}
-confint(pb2)
+confint(pb2) #This is what will be in the plot
 ```
 ```{julia}
 draw(

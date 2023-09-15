@@ -104,7 +104,25 @@ m_ovi3 = let
 ```{julia}
 #| label: lrt1
 
-MixedModels.likelihoodratiotest(m_ovi1, m_ovi2, m_ovi3)
+MixedModels.likelihoodratiotest(m_prm1, m_prm2)
+
+
+gof_summary = let
+  nms = [:m_prm1, :m_prm2]
+  mods = eval.(nms)
+  lrt = MixedModels.likelihoodratiotest(m_prm1, m_prm2)
+  DataFrame(;
+    name = nms, 
+    dof=dof.(mods),
+    deviance=round.(deviance.(mods), digits=0),
+    AIC=round.(aic.(mods),digits=0),
+    AICc=round.(aicc.(mods),digits=0),
+     BIC=round.(bic.(mods),digits=0),
+    χ²=vcat(:., round.(lrt.tests.deviancediff, digits=0)),
+    χ²_dof=vcat(:., round.(lrt.tests.dofdiff, digits=0)),
+    pvalue=vcat(:., round.(lrt.tests.pvalues, digits=3))
+  )
+end
 ```
 
 Most likely don't need 3-factor interaction. 
@@ -161,9 +179,9 @@ VarCorr(m_prm1)
 ```
 
 ```{julia}
-let mods = [m_ovi2, m_prm1, m_zcp, m_cpx];
+let mods = [m_prm1, m_prm2];
  DataFrame(;
-    model=[:m_ovi, :m_prm1, :m_zcp, :m_cpx],
+    model=[m_prm1, m_prm2],
     pars=dof.(mods),
     geomdof=round.(Int, (sum ∘ leverage).(mods)),
     AIC=round.(Int, aic.(mods)),
@@ -171,6 +189,7 @@ let mods = [m_ovi2, m_prm1, m_zcp, m_cpx];
     BIC=round.(Int, bic.(mods)),
   )
 end
+
 ```
 
 AIC and BIC: select m_prm1.
@@ -184,7 +203,7 @@ We add the CPs back in.
 
 m_prm2 = let
     form = @formula(log(rt) ~ 1 + (Type + Cat + Resp)^2 + 
-                             (1 + Resp | Subj) + (1 + Cat + Resp | Item));
+                             (1 + Resp | Subj) + (1 + Cat +Resp | Item));
     fit(MixedModel, form, dat; contrasts);
   end
 issingular(m_prm2) #  ok
