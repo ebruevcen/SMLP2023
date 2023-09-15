@@ -135,12 +135,12 @@ We don't look at fixed effects before model selection.
 We can also look separately at item- and subj-related VCs and CPs for subjects and items.
 
 ```{julia}
-first(m_cpx.λ)
+first(m_cpx.λ) #there should not be 0s in diagonal for lambdas
 ```
 VP is zero for last diagonal entry; not supported by data.
 
 ```{julia}
-last(m_cpx.λ)
+last(m_cpx.λ) #there should not be 0s in diagonal for lambdas
 ```
 
 VP is zero for fourth diagonal entry; not supported by data.
@@ -152,16 +152,43 @@ VP is zero for fourth diagonal entry; not supported by data.
 We take out correlation parameters.
 
 ```{julia}
-m_zcp = let 
-    form = @formula (1000/rt) ~ 1+F*P*Q*lQ*lT +
-                            zerocorr(1+F+P+Q+lQ+lT | subj) +
-                            zerocorr(1+P+Q+lQ+lT | item);
+m_prm_5 = let 
+    form = @formula (1000/rt) ~ 1+ (F+P+Q+lQ+lT)^5 +
+                           (1+Q+lT| subj)  +
+                            (1 | item);
     fit(MixedModel, form, dat; contrasts)
 end
 
-VarCorr(m_zcp)
-issingular(m_zcp)
-MixedModels.PCA(m_zcp)
+m_prm_4 = let 
+    form = @formula (1000/rt) ~ 1+ (F+P+Q+lQ+lT)^4 +
+                            (1+Q+lT| subj) +
+                            (1 | item);
+    fit(MixedModel, form, dat; contrasts)
+end
+
+
+m_prm_3 = let 
+    form = @formula (1000/rt) ~ 1+ (F+P+Q+lQ+lT)^3 +
+                            (1+Q+lT| subj)  +
+                            (1 | item);
+    fit(MixedModel, form, dat; contrasts)
+end
+
+m_prm_2 = let 
+    form = @formula (1000/rt) ~ 1+ (F+P+Q+lQ+lT)^2 +
+                            (1+Q+lT| subj) +
+                            (1 | item);
+    fit(MixedModel, form, dat; contrasts)
+end
+
+m_prm_1 = let 
+    form = @formula (1000/rt) ~ 1+ F/(P/Q) +
+                            (1+Q| subj)  + zerocorr(0+lT | subj) +
+                            zerocorr(1+P | item);
+    fit(MixedModel, form, dat; contrasts)
+end
+
+
 ```
 
 ## VCs and CPs
@@ -169,16 +196,16 @@ MixedModels.PCA(m_zcp)
 Look ok. It might be a good idea to prune the LMM. 
 
 ```{julia}
-MixedModels.likelihoodratiotest(m_zcp, m_cpx)
+MixedModels.likelihoodratiotest(m_prm_5, m_prm_4, m_prm_3, m_prm_2, m_prm_1)
 ```
 
 The LRT favors the complex LMM, but not that  χ² < 2*(χ²-dof); AIC and BIC suggest against selection. 
 
 ```{julia}
 gof_summary = let
-  nms = [:m_zcp, :m_cpx]
+  nms = [:m_prm_5, :m_prm_4, :m_prm_3, :m_prm_2, :m_prm_1]
   mods = eval.(nms)
-  lrt = MixedModels.likelihoodratiotest(m_zcp, m_cpx)
+  lrt = MixedModels.likelihoodratiotest(m_prm_5, m_prm_4, m_prm_3, m_prm_2, m_prm_1)
   DataFrame(;
     name = nms, 
     dof=dof.(mods),
